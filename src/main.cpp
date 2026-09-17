@@ -1,18 +1,34 @@
 #include <Arduino.h>
+#include "stepper.h"
+#include "pedal.h"
+#include "main.h"
 
-// put function declarations here:
-int myFunction(int, int);
+
+unsigned long lastStart = 0;
 
 void setup() {
-  // put your setup code here, to run once:
-  int result = myFunction(2, 3);
+Serial.begin(115200);
+  stepperSetup();
+  pedalSetup();
+
+  lastStart = millis() -MIN_PERIOD_MS; // so that the first loop iteration runs immediately
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  unsigned long now = millis();
+  if ((long)(now - lastStart) >= (long)MIN_PERIOD_MS) { // cast to long to avoid overflow issues
+    lastStart = now;
+    programLoop();
+  }
 }
 
-// put function definitions here:
-int myFunction(int x, int y) {
-  return x + y;
+void programLoop() {
+  // read pedal value
+  int pedalValue = analogRead(pedalPin);
+
+  // calculate speed based on pedal value
+  int speed = calculateSpeed(pedalValue);
+
+  // set motor speed
+  setMotorSpeed(speed);
 }
