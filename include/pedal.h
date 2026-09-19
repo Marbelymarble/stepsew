@@ -7,5 +7,6 @@
 
 
 void pedalSetup();
-void pedalRead();
+int pedalRead();
+float mapPedalValue(int pedalValue);
 #endif

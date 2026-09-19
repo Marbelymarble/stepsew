@@ -12,19 +12,22 @@ void stepperSetup() {
     stepper->setEnablePin(enablePin, true);
     stepper->setAutoEnable(true);
     stepper->setSpeedInUs(1000);    // needs better version
-    stepper->setAcceleration(1000); // needs better version
+    stepper->setAcceleration(1000000); // needs better version
   }
-  Serial.println("Stepper setup complete");
+  // Serial.println("Stepper setup complete");
 }
 
 int calculateRPM(float speedFactor) {
-    int rpm = static_cast<int>(static_cast<float>(motorMaxRPM-motorMinRPM) * speedFactor)+motorMinRPM;
+    int rpm = static_cast<int>(static_cast<float>(motorMaxRPM-(motorMinRPM+1)) * speedFactor)+motorMinRPM + 1;
     return rpm;
 }
 
 void disableMotor() {
   if (stepper) {
-    stepper->disableOutputs();
+    if(stepper->isRunning()) {
+      stepper->stopMove();
+      stepper->disableOutputs();
+    }
   }
 }
 
@@ -36,14 +39,18 @@ void enableMotorMin() {
 
 void enableMotor(int rpm) {
   if (stepper) {
-    stepper->enableOutputs();
     // Convert RPM to microseconds per step
     float stepsPerMinute = rpm * motorStepsPerRevolution;
     float stepsPerSecond = stepsPerMinute / 60.0;
-    float usPerStep = 1000000.0 / stepsPerSecond;
-    stepper->setSpeedInUs(static_cast<uint32_t>(usPerStep));
-    Serial.print("Motor enabled at RPM: ");
-    Serial.println(rpm);
+    stepper->setSpeedInHz(static_cast<uint32_t>(stepsPerSecond));
+    // Serial.println(static_cast<uint32_t>(stepsPerSecond));
+    stepper->applySpeedAcceleration();
+    if(!(stepper->isRunning())) {
+      stepper->enableOutputs();
+      stepper->runForward();
+    }
+    // Serial.print("Motor enabled at RPM: ");
+    // Serial.println(rpm);
   }
 
 }
