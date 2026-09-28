@@ -1,0 +1,4 @@
+(sym_lib_table
+	(version 7)
+	(lib (name "S3-Supermini") (type "KiCad") (uri "${KIPRJMOD}/libs/symbols/S3-Supermini.kicad_sym") (options "") (descr ""))
+)

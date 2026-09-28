@@ -4,6 +4,7 @@
 FastAccelStepperEngine engine = FastAccelStepperEngine();
 FastAccelStepper *stepper = NULL;
 
+
 void stepperSetup() {
   engine.init();
   stepper = engine.stepperConnectToPin(stepPin);
@@ -12,7 +13,7 @@ void stepperSetup() {
     stepper->setEnablePin(enablePin, true);
     stepper->setAutoEnable(true);
     stepper->setSpeedInUs(1000);    // needs better version
-    stepper->setAcceleration(1000000); // needs better version
+    stepper->setAcceleration(400000); // needs better version
   }
   // Serial.println("Stepper setup complete");
 }
@@ -24,10 +25,14 @@ int calculateRPM(float speedFactor) {
 
 void disableMotor() {
   if (stepper) {
-    if(stepper->isRunning()) {
+    //while (stepper->getCurrentPosition() > 400 ) {
+    //  stepper->runForward();
+    //}
+    //stepper->moveTo(400);
+    //if (stepper->isQueueEmpty()) {
       stepper->stopMove();
       stepper->disableOutputs();
-    }
+    //}
   }
 }
 
@@ -35,6 +40,25 @@ void enableMotorMin() {
   if (stepper) {
     enableMotor(motorMinRPM);
   }
+}
+
+long returnCurrentSpeed() {
+  if (stepper) {
+    return stepper->getCurrentSpeedInUs();
+  }
+  return 0;
+}
+
+long returnCurrentPosition(){
+  return stepper->getCurrentPosition();
+}
+
+void setCurrentPosition(int position) {
+  stepper->setCurrentPosition(position);
+}
+
+bool isMotorRunning(){
+  return stepper->isRunning();
 }
 
 void enableMotor(int rpm) {
