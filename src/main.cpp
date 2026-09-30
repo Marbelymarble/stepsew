@@ -17,6 +17,10 @@ long rotationCount = 0;
 bool bdc_trigger = false;
 
 
+unsigned char machineState = stopped;
+bool request_homing = false;
+
+
 void setup() {
 Serial.begin(115200);
   stepperSetup();
@@ -25,6 +29,8 @@ Serial.begin(115200);
   pedalAvg.begin();
   pinMode(33, INPUT_PULLUP); // Set pin 33 as input with pull-up resistor
   attachInterrupt(33, bdc_callback, FALLING);
+  pinMode(dirPin, OUTPUT);
+  digitalWrite(dirPin, LOW);
 }
 
 void loop() {
@@ -48,45 +54,63 @@ void programLoop() {
   Serial.println(returnCurrentPosition());
 
   int pedalImmediate = pedalRead();
-  //Serial.println(pedalAvg.getAvg());
-  const int enterNormalModeThreshold = pedalSpeedVariationThreshold + pedalSpeedVariationHysteresis;
-  const int enterMinModeThreshold = pedalSpeedVariationThreshold - pedalSpeedVariationHysteresis;
-  const int disableMotorThreshold = pedalEnableThreshold - pedalEnableHysteresis;
-  const int enableMotorThreshold = pedalEnableThreshold + pedalEnableHysteresis;
+  bool homeStarted = false;
 
-  if (isMotorEnabled) {
-    if (pedalAvg.getAvg() <= disableMotorThreshold) {
-      disableMotor();
-      isMotorEnabled = false;
-      isMinSpeedMode = false;
-      return;
+  switch (machineState) {
+    case stopped: 
+      if (isMotorRunning) {
+        disableMotor();
+        // break;
+      }
+    if (pedalAvg.getAvg() > (pedalEnableThreshold + pedalHysteresis)) {
+      machineState = minSpeed;
+    } else {
+      break;
     }
-  } else {
-    if (pedalAvg.getAvg() < enableMotorThreshold) {
-      disableMotor();
-      isMinSpeedMode = false;
-      return;
+
+    case minSpeed:
+      enableMotorMin();
+      if (pedalAvg.getAvg() < (pedalEnableThreshold - pedalHysteresis)) {
+        machineState = homing;
+        break;
+    } else if (pedalAvg.getAvg() > (pedalSpeedVariationThreshold + pedalHysteresis)) {
+      machineState = speedVariation;
+      break;
+    } else {
+      break;
     }
-    isMotorEnabled = true;
+
+    case speedVariation:
+      if(pedalAvg.getAvg() < (pedalSpeedVariationThreshold - pedalHysteresis)) {
+        machineState = minSpeed;
+        break;
+      } else {
+        float pedalMapped = mapPedalValue(pedalAvg.getAvg());
+        enableMotor(calculateRPM(powf(pedalMapped, pedalPower)));
+        break;
+      }
+
+    case homing:
+      if (!homeStarted) {
+        homeStarted = true;
+        goToHome();
+      }
+      
+      if ((pedalAvg.getAvg() > (pedalSpeedVariationThreshold + pedalHysteresis))) {
+        machineState = speedVariation;
+        break;
+      }
+      
+      if(returnCurrentPosition() < 100) {
+        disableMotor();
+        homeStarted = false;
+        machineState = stopped;
+        break;
+      }
   }
 
-  if (isMinSpeedMode) {
-    if (pedalAvg.getAvg() >= enterNormalModeThreshold) {
-      isMinSpeedMode = false;
-    }
-  } else {
-    if (pedalAvg.getAvg() <= enterMinModeThreshold) {
-      isMinSpeedMode = true;
-    }
-  }
 
-  if (isMinSpeedMode) {
-    enableMotorMin();
-    return;
-  }
 
-  float pedalMapped = mapPedalValue(pedalAvg.getAvg());
-  enableMotor(calculateRPM(powf(pedalMapped, pedalPower)));
 }
 
 void ARDUINO_ISR_ATTR bdc_callback() {
@@ -99,4 +123,8 @@ void ARDUINO_ISR_ATTR bdc_callback() {
       setCurrentPosition(0);
     }
 
+}
+
+long returnPedalAvg() {
+  return pedalAvg.getAvg();
 }

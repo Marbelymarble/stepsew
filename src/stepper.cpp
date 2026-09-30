@@ -9,7 +9,7 @@ void stepperSetup() {
   engine.init();
   stepper = engine.stepperConnectToPin(stepPin);
   if (stepper) {
-    stepper->setDirectionPin(dirPin);
+    // stepper->setDirectionPin(dirPin);
     stepper->setEnablePin(enablePin, true);
     stepper->setAutoEnable(true);
     stepper->setSpeedInUs(1000);    // needs better version
@@ -33,6 +33,14 @@ void disableMotor() {
       stepper->stopMove();
       stepper->disableOutputs();
     //}
+  }
+}
+
+void goToHome () {
+  if (stepper) {
+    stepper->setSpeedInHz(4500);
+    stepper->applySpeedAcceleration();
+    stepper->runForward();
   }
 }
 
