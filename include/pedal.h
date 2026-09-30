@@ -1,12 +1,12 @@
-#ifndef PEDAL_H
-#define PEDAL_H
+#pragma once
 
-#include <Arduino.h>
-#include "main.h"
-#include "stepper.h"
+#include <stdint.h>
 
+namespace Pedal {
 
-void pedalSetup();
-int pedalRead();
-float mapPedalValue(int pedalValue);
-#endif
+void begin();
+// Call once per control interval. Returns the filtered 12-bit ADC value.
+int sample();
+uint32_t rpmForReading(int reading);
+
+}  // namespace Pedal
